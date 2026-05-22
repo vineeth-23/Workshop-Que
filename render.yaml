@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: workshop-que
+    env: python
+    plan: free
+    buildCommand: ""
+    startCommand: "python server.py"
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-5.4-mini
+      - key: COMFYUI_URL
+        value: ""

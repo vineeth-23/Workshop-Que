@@ -16,6 +16,8 @@ COMFYUI_URL = os.environ.get("COMFYUI_URL", "http://127.0.0.1:8188").rstrip("/")
 ANIMATION_WORKFLOW_PATH = Path(
     os.environ.get("ANIMATION_WORKFLOW_PATH", ROOT / "workflows" / "wan_text_to_video_api.json")
 )
+HOST = os.environ.get("HOST", "0.0.0.0")
+PORT = int(os.environ.get("PORT", "4173"))
 
 
 def utc_now():
@@ -586,8 +588,8 @@ class WorkshopHandler(SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     init_db()
-    server = ThreadingHTTPServer(("0.0.0.0", 4173), WorkshopHandler)
-    print(f"Serving on http://127.0.0.1:4173")
+    server = ThreadingHTTPServer((HOST, PORT), WorkshopHandler)
+    print(f"Serving on http://{HOST}:{PORT}")
     print(f"Writing responses to {DB_PATH}")
     print(f"Analysis model: {ANALYSIS_MODEL}")
     server.serve_forever()
