@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+
+# Local database and generated outputs
+responses.db
+*.sqlite
+*.sqlite3
+
+# Local ComfyUI runtime/install; keep only our exported workflows in ./workflows
+ComfyUI/
+
+# Environment secrets
+.env
+.env.*
+
+# OS/editor noise
+.DS_Store
+.idea/
+.vscode/

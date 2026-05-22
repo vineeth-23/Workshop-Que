@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Stories We Tell Our Machines</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="grain" aria-hidden="true"></div>
+    <main class="app-shell">
+      <section class="meeting-board" aria-labelledby="pageTitle">
+        <button class="theme-toggle" type="button" id="themeToggle" aria-pressed="false" aria-label="Switch to dark mode">
+          <span class="theme-toggle-track" aria-hidden="true">
+            <span class="theme-toggle-thumb"></span>
+          </span>
+          <span class="theme-toggle-text">Dark</span>
+        </button>
+
+        <header class="board-hero">
+          <p class="kicker">World-making board</p>
+          <h1 id="pageTitle">The Stories We Tell Our Machines</h1>
+          <div class="care-banner">
+            <span>Care is intentional, relational, and supports the well-being, survival, and flourishing of all.</span>
+          </div>
+        </header>
+
+        <section class="view active" data-view-title="World-making board" aria-label="Question areas">
+          <div class="board-grid">
+          <article class="question-card resources" data-card="resources" id="resources">
+            <div class="card-icon" aria-hidden="true">R</div>
+            <div>
+              <p class="card-label">01 / Materials</p>
+              <h2>Resources</h2>
+              <p class="prompt">What do we have or need to get started?</p>
+            </div>
+            <div class="prompt-stack">
+              <label>
+                <span>How does this area support care?</span>
+                <textarea aria-label="Resources care"></textarea>
+              </label>
+              <label>
+                <span>What stories are we telling ourselves about success?</span>
+                <textarea aria-label="Resources success"></textarea>
+              </label>
+            </div>
+          </article>
+
+          <article class="question-card purpose" data-card="purpose" id="purpose">
+            <div class="card-icon" aria-hidden="true">P</div>
+            <div>
+              <p class="card-label">02 / Direction</p>
+              <h2>Purpose</h2>
+              <p class="prompt">Why are we gathering, building, or deciding?</p>
+            </div>
+            <div class="prompt-stack">
+              <label>
+                <span>How does this area support care?</span>
+                <textarea aria-label="Purpose care"></textarea>
+              </label>
+              <label>
+                <span>What stories are we telling ourselves about success?</span>
+                <textarea aria-label="Purpose success"></textarea>
+              </label>
+            </div>
+          </article>
+
+          <article class="question-card innovation" data-card="innovation" id="innovation">
+            <div class="card-icon" aria-hidden="true">I</div>
+            <div>
+              <p class="card-label">03 / Possibility</p>
+              <h2>Innovation</h2>
+              <p class="prompt">What new forms, tools, or practices might emerge?</p>
+            </div>
+            <div class="prompt-stack">
+              <label>
+                <span>How does this area support care?</span>
+                <textarea aria-label="Innovation care"></textarea>
+              </label>
+              <label>
+                <span>What stories are we telling ourselves about success?</span>
+                <textarea aria-label="Innovation success"></textarea>
+              </label>
+            </div>
+          </article>
+
+          <article class="question-card growth" data-card="growth" id="growth">
+            <div class="card-icon" aria-hidden="true">G</div>
+            <div>
+              <p class="card-label">04 / Expansion</p>
+              <h2>Growth</h2>
+              <p class="prompt">What should deepen, scale, heal, or become more possible?</p>
+            </div>
+            <div class="prompt-stack">
+              <label>
+                <span>How does this area support care?</span>
+                <textarea aria-label="Growth care"></textarea>
+              </label>
+              <label>
+                <span>What stories are we telling ourselves about success?</span>
+                <textarea aria-label="Growth success"></textarea>
+              </label>
+            </div>
+          </article>
+          </div>
+        </section>
+
+        <section class="view" data-view-title="Scenario card" aria-label="Scenario card">
+          <article class="scenario-card" id="scenario">
+            <p class="kicker">Scenario card</p>
+            <h2>One System, Many Stories</h2>
+            <p>
+              A customer calls after discovering a reconnection fee on their bill. They have already tried a chatbot and failed to get help.
+              The automated phone system misunderstands them more than once. When they finally reach a live agent, the agent wants to help,
+              but the screen in front of them shows that the fee is valid and that the customer is not eligible for a full waiver.
+            </p>
+            <p>
+              The agent is also being measured on speed, compliance, and call length. The point of the exercise is that the AI system is not
+              just one thing. It is the chatbot, the routing logic, the score, the dashboard, the script, the waiver rules, and the management
+              metrics around the human agent.
+            </p>
+          </article>
+        </section>
+
+        <section class="view" data-view-title="Stories often told" aria-label="Stories often told">
+          <div class="story-intro">
+            <p class="kicker">Stories often told</p>
+            <h2>Choose the inherited logic that best describes what the institution is teaching the system.</h2>
+          </div>
+        </section>
+
+        <section class="view" data-view-title="Story 1 of 9" aria-label="If we can't measure it, it doesn't matters.">
+          <article class="logic-card logic-red" id="logic-measure">
+            <div class="logic-number">1</div>
+            <h2>If we can't measure it, it doesn't matters.</h2>
+            <div class="vote-grid" role="radiogroup" aria-label="Vote for If we can't measure it, it doesn't matters.">
+              <label class="vote-option yes"><input type="radio" name="logic-measure" value="Yes" /> <span>Yes</span></label>
+              <label class="vote-option yes-if"><input type="radio" name="logic-measure" value="Yes, if" /> <span>Yes, if...</span></label>
+              <label class="vote-option no"><input type="radio" name="logic-measure" value="Not like this" /> <span>Not like this</span></label>
+              <label class="vote-option unsure"><input type="radio" name="logic-measure" value="I don't know yet" /> <span>I don't know yet</span></label>
+            </div>
+            <label class="reason-field"><span>Reason</span><textarea aria-label="Reason for measure logic"></textarea></label>
+          </article>
+        </section>
+
+        <section class="view" data-view-title="Story 2 of 9" aria-label="Attention is all that matters.">
+          <article class="logic-card logic-blue" id="logic-attention">
+            <div class="logic-number">2</div>
+            <h2>Attention is all that matters.</h2>
+            <div class="vote-grid" role="radiogroup" aria-label="Vote for Attention is all that matters.">
+              <label class="vote-option yes"><input type="radio" name="logic-attention" value="Yes" /> <span>Yes</span></label>
+              <label class="vote-option yes-if"><input type="radio" name="logic-attention" value="Yes, if" /> <span>Yes, if...</span></label>
+              <label class="vote-option no"><input type="radio" name="logic-attention" value="Not like this" /> <span>Not like this</span></label>
+              <label class="vote-option unsure"><input type="radio" name="logic-attention" value="I don't know yet" /> <span>I don't know yet</span></label>
+            </div>
+            <label class="reason-field"><span>Reason</span><textarea aria-label="Reason for attention logic"></textarea></label>
+          </article>
+        </section>
+
+        <section class="view" data-view-title="Story 3 of 9" aria-label="Scale equals value.">
+          <article class="logic-card logic-green" id="logic-scale">
+            <div class="logic-number">3</div>
+            <h2>Scale equals value.</h2>
+            <div class="vote-grid" role="radiogroup" aria-label="Vote for Scale equals value.">
+              <label class="vote-option yes"><input type="radio" name="logic-scale" value="Yes" /> <span>Yes</span></label>
+              <label class="vote-option yes-if"><input type="radio" name="logic-scale" value="Yes, if" /> <span>Yes, if...</span></label>
+              <label class="vote-option no"><input type="radio" name="logic-scale" value="Not like this" /> <span>Not like this</span></label>
+              <label class="vote-option unsure"><input type="radio" name="logic-scale" value="I don't know yet" /> <span>I don't know yet</span></label>
+            </div>
+            <label class="reason-field"><span>Reason</span><textarea aria-label="Reason for scale logic"></textarea></label>
+          </article>
+        </section>
+
+        <section class="view" data-view-title="Story 4 of 9" aria-label="Efficiency is care.">
+          <article class="logic-card logic-gold" id="logic-efficiency">
+            <div class="logic-number">4</div>
+            <h2>Efficiency is care.</h2>
+            <div class="vote-grid" role="radiogroup" aria-label="Vote for Efficiency is care.">
+              <label class="vote-option yes"><input type="radio" name="logic-efficiency" value="Yes" /> <span>Yes</span></label>
+              <label class="vote-option yes-if"><input type="radio" name="logic-efficiency" value="Yes, if" /> <span>Yes, if...</span></label>
+              <label class="vote-option no"><input type="radio" name="logic-efficiency" value="Not like this" /> <span>Not like this</span></label>
+              <label class="vote-option unsure"><input type="radio" name="logic-efficiency" value="I don't know yet" /> <span>I don't know yet</span></label>
+            </div>
+            <label class="reason-field"><span>Reason</span><textarea aria-label="Reason for efficiency logic"></textarea></label>
+          </article>
+        </section>
+
+        <section class="view" data-view-title="Story 5 of 9" aria-label="Speed is innovation.">
+          <article class="logic-card logic-red" id="logic-speed">
+            <div class="logic-number">5</div>
+            <h2>Speed is innovation.</h2>
+            <div class="vote-grid" role="radiogroup" aria-label="Vote for Speed is innovation.">
+              <label class="vote-option yes"><input type="radio" name="logic-speed" value="Yes" /> <span>Yes</span></label>
+              <label class="vote-option yes-if"><input type="radio" name="logic-speed" value="Yes, if" /> <span>Yes, if...</span></label>
+              <label class="vote-option no"><input type="radio" name="logic-speed" value="Not like this" /> <span>Not like this</span></label>
+              <label class="vote-option unsure"><input type="radio" name="logic-speed" value="I don't know yet" /> <span>I don't know yet</span></label>
+            </div>
+            <label class="reason-field"><span>Reason</span><textarea aria-label="Reason for speed logic"></textarea></label>
+          </article>
+        </section>
+
+        <section class="view" data-view-title="Story 6 of 9" aria-label="Users are meant to be upsold.">
+          <article class="logic-card logic-blue" id="logic-upsold">
+            <div class="logic-number">6</div>
+            <h2>Users are meant to be upsold.</h2>
+            <div class="vote-grid" role="radiogroup" aria-label="Vote for Users are meant to be upsold.">
+              <label class="vote-option yes"><input type="radio" name="logic-upsold" value="Yes" /> <span>Yes</span></label>
+              <label class="vote-option yes-if"><input type="radio" name="logic-upsold" value="Yes, if" /> <span>Yes, if...</span></label>
+              <label class="vote-option no"><input type="radio" name="logic-upsold" value="Not like this" /> <span>Not like this</span></label>
+              <label class="vote-option unsure"><input type="radio" name="logic-upsold" value="I don't know yet" /> <span>I don't know yet</span></label>
+            </div>
+            <label class="reason-field"><span>Reason</span><textarea aria-label="Reason for upsold logic"></textarea></label>
+          </article>
+        </section>
+
+        <section class="view" data-view-title="Story 7 of 9" aria-label="Past success predicts future worth.">
+          <article class="logic-card logic-green" id="logic-past">
+            <div class="logic-number">7</div>
+            <h2>Past success predicts future worth.</h2>
+            <div class="vote-grid" role="radiogroup" aria-label="Vote for Past success predicts future worth.">
+              <label class="vote-option yes"><input type="radio" name="logic-past" value="Yes" /> <span>Yes</span></label>
+              <label class="vote-option yes-if"><input type="radio" name="logic-past" value="Yes, if" /> <span>Yes, if...</span></label>
+              <label class="vote-option no"><input type="radio" name="logic-past" value="Not like this" /> <span>Not like this</span></label>
+              <label class="vote-option unsure"><input type="radio" name="logic-past" value="I don't know yet" /> <span>I don't know yet</span></label>
+            </div>
+            <label class="reason-field"><span>Reason</span><textarea aria-label="Reason for past success logic"></textarea></label>
+          </article>
+        </section>
+
+        <section class="view" data-view-title="Story 8 of 9" aria-label="Compliance is fairness.">
+          <article class="logic-card logic-gold" id="logic-compliance">
+            <div class="logic-number">8</div>
+            <h2>Compliance is fairness.</h2>
+            <div class="vote-grid" role="radiogroup" aria-label="Vote for Compliance is fairness.">
+              <label class="vote-option yes"><input type="radio" name="logic-compliance" value="Yes" /> <span>Yes</span></label>
+              <label class="vote-option yes-if"><input type="radio" name="logic-compliance" value="Yes, if" /> <span>Yes, if...</span></label>
+              <label class="vote-option no"><input type="radio" name="logic-compliance" value="Not like this" /> <span>Not like this</span></label>
+              <label class="vote-option unsure"><input type="radio" name="logic-compliance" value="I don't know yet" /> <span>I don't know yet</span></label>
+            </div>
+            <label class="reason-field"><span>Reason</span><textarea aria-label="Reason for compliance logic"></textarea></label>
+          </article>
+        </section>
+
+        <section class="view" data-view-title="Synthesis" aria-label="The story we are actually telling is...">
+          <article class="logic-card logic-purple" id="logic-story">
+            <div class="logic-number">9</div>
+            <h2>The story we are actually telling is...</h2>
+            <label class="reason-field synthesis"><span>Table synthesis</span><textarea aria-label="The story we are actually telling"></textarea></label>
+          </article>
+        </section>
+
+        <section class="view" data-view-title="Witness card" aria-label="Witness card">
+          <article class="witness-card" id="witness-card">
+            <p class="kicker">Witness card</p>
+            <div class="witness-orbit" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <p class="witness-number" id="witnessNumber">1</p>
+            <h2 id="witnessRole">Customer</h2>
+            <p id="witnessPrompt">In this world, I feel...</p>
+          </article>
+        </section>
+
+        <section class="view" data-view-title="Role question 1" aria-label="Role reflection question 1">
+          <article class="witness-question">
+            <div class="role-ribbon">
+              <span>Answer as</span>
+              <strong data-role-name>Customer</strong>
+            </div>
+            <div class="question-number">1</div>
+            <h2>A story I need to stop telling the systems I work with is...</h2>
+            <label class="reason-field synthesis"><span>Reflection</span><textarea aria-label="Role reflection story to stop"></textarea></label>
+          </article>
+        </section>
+
+        <section class="view" data-view-title="Role question 2" aria-label="Role reflection question 2">
+          <article class="witness-question">
+            <div class="role-ribbon">
+              <span>Answer as</span>
+              <strong data-role-name>Customer</strong>
+            </div>
+            <div class="question-number">2</div>
+            <h2>A decision I can no longer call neutral is...</h2>
+            <label class="reason-field synthesis"><span>Reflection</span><textarea aria-label="Role reflection neutral decision"></textarea></label>
+          </article>
+        </section>
+
+        <section class="view" data-view-title="Role question 3" aria-label="Role reflection question 3">
+          <article class="witness-question">
+            <div class="role-ribbon">
+              <span>Answer as</span>
+              <strong data-role-name>Customer</strong>
+            </div>
+            <div class="question-number">3</div>
+            <h2>A question I am leaving with is...</h2>
+            <label class="reason-field synthesis"><span>Reflection</span><textarea aria-label="Role reflection leaving question"></textarea></label>
+            <section class="analysis-panel" id="analysisPanel" hidden aria-live="polite">
+              <div class="analysis-heading">
+                <p class="kicker">Analysis</p>
+                <h3>Response reading</h3>
+              </div>
+              <div id="analysisContent"></div>
+            </section>
+          </article>
+        </section>
+
+        <nav class="section-nav" aria-label="Questionnaire navigation">
+          <button class="back-button" type="button" id="backSection">Back</button>
+          <div class="progress-cluster">
+            <p id="stepLabel">World-making board</p>
+            <p class="validation-message" id="validationMessage" role="status" aria-live="polite"></p>
+            <div class="section-dots" aria-hidden="true"></div>
+          </div>
+          <button class="next-button" type="button" id="nextSection">Next</button>
+        </nav>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
