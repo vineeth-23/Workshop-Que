@@ -9,13 +9,37 @@ from uuid import uuid4
 
 
 ROOT = Path(__file__).resolve().parent
+
+
+def load_dotenv(path=ROOT / ".env"):
+    """Minimal .env loader so the app stays dependency-free."""
+    try:
+        for line in Path(path).read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            os.environ.setdefault(key, value)
+    except FileNotFoundError:
+        pass
+
+
+load_dotenv()
+
 DB_PATH = ROOT / "responses.db"
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 ANALYSIS_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5.4-mini")
-COMFYUI_URL = os.environ.get("COMFYUI_URL", "http://127.0.0.1:8188").rstrip("/")
-ANIMATION_WORKFLOW_PATH = Path(
-    os.environ.get("ANIMATION_WORKFLOW_PATH", ROOT / "workflows" / "wan_text_to_video_api.json")
+
+# Comfy Cloud (https://docs.comfy.org/development/cloud/overview)
+COMFY_BASE_URL = os.environ.get("COMFY_BASE_URL", "https://cloud.comfy.org").rstrip("/")
+COMFY_API_KEY = os.environ.get("COMFY_API_KEY", "")
+IMAGE_WORKFLOW_PATH = Path(
+    os.environ.get("IMAGE_WORKFLOW_PATH", ROOT / "workflows" / "ideogram_poster_api.json")
 )
+# Node titles the server fills in; everything else is the professor's to edit in the canvas.
+DYNAMIC_NODE_TITLE = os.environ.get("DYNAMIC_NODE_TITLE", "WORKSHOP_DYNAMIC")
 HOST = os.environ.get("HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", "4173"))
 
@@ -357,93 +381,111 @@ def top_topic_scores(analysis):
     return sorted(scored, key=lambda item: item[1], reverse=True)[:4]
 
 
-def extract_text_answers(payload, limit=12):
-    answers = []
-    for item in payload.get("textareas") or []:
-        label = str(item.get("id", "")).strip()
-        value = str(item.get("value", "")).strip()
-        if label and value:
-            answers.append(f"{label}: {value}")
-        if len(answers) >= limit:
-            break
-    return answers
-
-
-def build_animation_prompt(payload, analysis):
+def build_dynamic_prompt(payload, analysis):
+    """The per-response text the app injects. The reusable style/visual direction
+    lives in the STYLE_PROMPT node, which the professor edits in the canvas."""
     role = (payload.get("assignedRole") or {}).get("name", "participant")
-    topics = ", ".join(f"{name} {score}%" for name, score in top_topic_scores(analysis)) or "care, trust, and responsibility"
-    summary = analysis.get("participant_summary", "")
-    care = (analysis.get("propensity_to_show_care") or {}).get("interpretation", "")
-    balance = (analysis.get("balance") or {}).get("interpretation", "")
-    answers = "\n".join(extract_text_answers(payload))
-    raw_json = json.dumps(payload, ensure_ascii=False, indent=2)
-    analysis_json = json.dumps(analysis, ensure_ascii=False, indent=2)
+    topics = ", ".join(name for name, _ in top_topic_scores(analysis)) or "care, trust, responsibility"
 
-    return f"""
-Create a short symbolic animation for the workshop "The Stories We Tell Our Machines".
-The respondent is anonymous and is answering from the role: {role}.
-Dominant analysis topics: {topics}.
-Analysis summary: {summary}
-Care reading: {care}
-Balance reading: {balance}
-
-Visual direction: elegant editorial workshop animation, warm paper texture, precise linework, muted red blue gold and green, humane but tense, systems diagrams softly moving, a person navigating an AI customer-service system, dashboards, policy rules, care signals, trust, responsibility, and institutional pressure. Slow cinematic camera drift, gentle parallax, poetic professional tone, no readable text.
-
-Selected raw answers:
-{answers}
-
-FULL RAW RESPONSES JSON SENT TO COMFYUI:
-{raw_json}
-
-FULL ANALYSIS JSON SENT TO COMFYUI:
-{analysis_json}
-""".strip()
+    return (
+        f"Themes: {topics}. "
+        f"Seen from the perspective of a {role} inside an AI customer-service system."
+    )
 
 
-def load_animation_workflow(animation_prompt, client_id):
-    with ANIMATION_WORKFLOW_PATH.open("r", encoding="utf-8") as workflow_file:
+def iter_nodes(workflow, *, title=None, class_type=None):
+    for node_id, node in workflow.items():
+        if not isinstance(node, dict):
+            continue
+        if title is not None and (node.get("_meta") or {}).get("title") != title:
+            continue
+        if class_type is not None and node.get("class_type") != class_type:
+            continue
+        yield node_id, node
+
+
+def load_image_workflow(dynamic_prompt, client_id):
+    with IMAGE_WORKFLOW_PATH.open("r", encoding="utf-8") as workflow_file:
         workflow = json.load(workflow_file)
 
-    workflow["6"]["inputs"]["text"] = animation_prompt
-    workflow["3"]["inputs"]["seed"] = int.from_bytes(uuid4().bytes[:8], "big")
-    workflow["50"]["inputs"]["filename_prefix"] = f"workshop/{client_id[:12]}"
+    seed = int.from_bytes(uuid4().bytes[:4], "big") % 2147483647
+
+    # Inject the dynamic text by node title so professor edits / re-wiring don't break it.
+    injected = False
+    for _, node in iter_nodes(workflow, title=DYNAMIC_NODE_TITLE):
+        node.setdefault("inputs", {})["value"] = dynamic_prompt
+        injected = True
+
+    # Randomize every Ideogram seed and stamp every SaveImage with a per-participant prefix.
+    for _, node in iter_nodes(workflow, class_type="IdeogramV3"):
+        # If there is no dedicated dynamic node, append the per-response text to whatever
+        # style prompt the professor typed into the node (only when it's a plain string,
+        # i.e. the prompt widget is not driven by a node connection).
+        prompt = node.get("inputs", {}).get("prompt")
+        if not injected and isinstance(prompt, str):
+            style = prompt.strip()
+            node["inputs"]["prompt"] = f"{style}\n\n{dynamic_prompt}" if style else dynamic_prompt
+            injected = True
+        node["inputs"]["seed"] = seed
+    for _, node in iter_nodes(workflow, class_type="SaveImage"):
+        node.setdefault("inputs", {})["filename_prefix"] = f"workshop/{client_id[:12]}"
+
+    if not injected:
+        raise RuntimeError(
+            f'Workflow has no "{DYNAMIC_NODE_TITLE}" node and no Ideogram prompt widget to fill'
+        )
     return workflow
 
 
 def comfy_request(path, method="GET", data=None, timeout=30):
     body = None if data is None else json.dumps(data).encode("utf-8")
-    req = request.Request(
-        f"{COMFYUI_URL}{path}",
-        data=body,
-        headers={"Content-Type": "application/json"} if body else {},
-        method=method,
-    )
+    headers = {}
+    if COMFY_API_KEY:
+        headers["X-API-Key"] = COMFY_API_KEY
+    if body:
+        headers["Content-Type"] = "application/json"
+
+    req = request.Request(f"{COMFY_BASE_URL}{path}", data=body, headers=headers, method=method)
     try:
         with request.urlopen(req, timeout=timeout) as response:
             raw = response.read()
     except error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"ComfyUI API error: {detail}") from exc
+        raise RuntimeError(f"Comfy Cloud API error: {detail}") from exc
     except error.URLError as exc:
-        raise RuntimeError(f"ComfyUI is not reachable at {COMFYUI_URL}") from exc
+        raise RuntimeError(f"Comfy Cloud is not reachable at {COMFY_BASE_URL}") from exc
 
     if not raw:
         return {}
     return json.loads(raw.decode("utf-8"))
 
 
-def queue_comfy_animation(payload, analysis):
+def submit_comfy_prompt(workflow):
+    if not COMFY_API_KEY:
+        raise RuntimeError("COMFY_API_KEY is not set")
+
+    # Partner nodes (Ideogram, Flux, ...) require the key in the body as well as the header.
+    data = {"prompt": workflow, "extra_data": {"api_key_comfy_org": COMFY_API_KEY}}
+    result = comfy_request("/api/prompt", method="POST", data=data, timeout=60)
+
+    node_errors = result.get("node_errors")
+    if node_errors:
+        raise RuntimeError(f"Comfy workflow error: {json.dumps(node_errors)}")
+    prompt_id = result.get("prompt_id")
+    if not prompt_id:
+        raise RuntimeError("Comfy Cloud did not return a prompt id")
+    return prompt_id
+
+
+def queue_comfy_image(payload, analysis):
     client_id = str(payload.get("clientId", "")).strip()
     if not client_id:
         raise ValueError("Missing clientId")
 
-    animation_prompt = build_animation_prompt(payload, analysis)
-    workflow = load_animation_workflow(animation_prompt, client_id)
+    dynamic_prompt = build_dynamic_prompt(payload, analysis)
+    workflow = load_image_workflow(dynamic_prompt, client_id)
     generation_id = str(uuid4())
-    result = comfy_request("/prompt", method="POST", data={"prompt": workflow}, timeout=30)
-    prompt_id = result.get("prompt_id")
-    if not prompt_id:
-        raise RuntimeError("ComfyUI did not return a prompt id")
+    prompt_id = submit_comfy_prompt(workflow)
 
     now = utc_now()
     with sqlite3.connect(DB_PATH) as conn:
@@ -460,7 +502,7 @@ def queue_comfy_animation(payload, analysis):
                 client_id,
                 prompt_id,
                 "queued",
-                animation_prompt,
+                dynamic_prompt,
                 json.dumps(payload, ensure_ascii=False),
                 json.dumps(analysis, ensure_ascii=False),
                 None,
@@ -472,30 +514,25 @@ def queue_comfy_animation(payload, analysis):
     return {"id": generation_id, "promptId": prompt_id, "status": "queued"}
 
 
-def find_video_outputs(history):
+def find_image_outputs(job):
     outputs = []
-    for node_output in (history.get("outputs") or {}).values():
-        for video in node_output.get("videos") or []:
-            filename = video.get("filename")
-            if filename:
-                query = parse.urlencode(
-                    {
-                        "filename": filename,
-                        "subfolder": video.get("subfolder", ""),
-                        "type": video.get("type", "output"),
-                    }
-                )
-                outputs.append({**video, "url": f"/api/comfy-media?{query}"})
+    for node_output in (job.get("outputs") or {}).values():
+        for image in node_output.get("images") or []:
+            filename = image.get("filename")
+            if not filename:
+                continue
+            query = parse.urlencode(
+                {
+                    "filename": filename,
+                    "subfolder": image.get("subfolder", ""),
+                    "type": image.get("type", "output"),
+                }
+            )
+            outputs.append({**image, "url": f"/api/comfy-media?{query}"})
     return outputs
 
 
-def update_generation_status(prompt_id):
-    history = comfy_request(f"/history/{parse.quote(prompt_id)}", timeout=20).get(prompt_id)
-    if not history:
-        return {"status": "running", "outputs": []}
-
-    outputs = find_video_outputs(history)
-    status = "completed" if outputs else "running"
+def persist_generation(prompt_id, status, job):
     now = utc_now()
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute(
@@ -504,9 +541,26 @@ def update_generation_status(prompt_id):
             SET status = ?, output_json = ?, updated_at = ?
             WHERE comfy_prompt_id = ?
             """,
-            (status, json.dumps(history, ensure_ascii=False), now, prompt_id),
+            (status, json.dumps(job, ensure_ascii=False), now, prompt_id),
         )
 
+
+def update_generation_status(prompt_id):
+    status_info = comfy_request(f"/api/job/{parse.quote(prompt_id)}/status", timeout=20)
+    state = str(status_info.get("status", "")).lower()
+
+    if state == "error":
+        message = status_info.get("error_message") or "Comfy Cloud generation failed"
+        persist_generation(prompt_id, "failed", status_info)
+        return {"status": "failed", "outputs": [], "error": message}
+
+    if state != "success":
+        return {"status": "running", "outputs": []}
+
+    job = comfy_request(f"/api/jobs/{parse.quote(prompt_id)}", timeout=30)
+    outputs = find_image_outputs(job)
+    status = "completed" if outputs else "running"
+    persist_generation(prompt_id, status, job)
     return {"status": status, "outputs": outputs}
 
 
@@ -528,7 +582,7 @@ class WorkshopHandler(SimpleHTTPRequestHandler):
             self.send_json(200, {"ok": True, "database": str(DB_PATH)})
             return
         parsed_path = parse.urlparse(self.path)
-        if parsed_path.path == "/api/animation-status":
+        if parsed_path.path == "/api/image-status":
             query = parse.parse_qs(parsed_path.query)
             prompt_id = (query.get("promptId") or [""])[0]
             if not prompt_id:
@@ -541,9 +595,11 @@ class WorkshopHandler(SimpleHTTPRequestHandler):
                 self.send_json(503, {"ok": False, "error": str(exc)})
             return
         if parsed_path.path == "/api/comfy-media":
-            target = f"{COMFYUI_URL}/view?{parsed_path.query}"
+            target = f"{COMFY_BASE_URL}/api/view?{parsed_path.query}"
+            headers = {"X-API-Key": COMFY_API_KEY} if COMFY_API_KEY else {}
             try:
-                with request.urlopen(target, timeout=30) as response:
+                media_req = request.Request(target, headers=headers)
+                with request.urlopen(media_req, timeout=30) as response:
                     body = response.read()
                     content_type = response.headers.get("Content-Type", "application/octet-stream")
                 self.send_response(200)
@@ -554,10 +610,22 @@ class WorkshopHandler(SimpleHTTPRequestHandler):
             except Exception:
                 self.send_json(404, {"ok": False, "error": "Media not found"})
             return
+        if self.is_blocked_static_path(parsed_path.path):
+            self.send_error(404, "Not found")
+            return
         super().do_GET()
 
+    @staticmethod
+    def is_blocked_static_path(path):
+        # Never serve the database, secrets, dotfiles, or source via static hosting.
+        segments = [segment for segment in path.split("/") if segment]
+        if any(segment.startswith(".") for segment in segments):
+            return True
+        basename = segments[-1].lower() if segments else ""
+        return basename.endswith((".db", ".sqlite", ".sqlite3", ".env", ".py", ".pyc"))
+
     def do_POST(self):
-        if self.path not in {"/api/responses", "/api/analyze", "/api/generate-animation"}:
+        if self.path not in {"/api/responses", "/api/analyze", "/api/generate-image"}:
             self.send_error(404, "Not found")
             return
 
@@ -576,7 +644,7 @@ class WorkshopHandler(SimpleHTTPRequestHandler):
                 analysis = payload.get("analysis") or {}
                 save_response(response_payload)
                 save_analysis(response_payload, analysis)
-                generation = queue_comfy_animation(response_payload, analysis)
+                generation = queue_comfy_image(response_payload, analysis)
                 self.send_json(200, {"ok": True, **generation})
         except ValueError as exc:
             self.send_json(400, {"ok": False, "error": str(exc)})
@@ -592,4 +660,5 @@ if __name__ == "__main__":
     print(f"Serving on http://{HOST}:{PORT}")
     print(f"Writing responses to {DB_PATH}")
     print(f"Analysis model: {ANALYSIS_MODEL}")
+    print(f"Comfy Cloud: {COMFY_BASE_URL}  (API key {'set' if COMFY_API_KEY else 'MISSING'})")
     server.serve_forever()

@@ -1,0 +1,141 @@
+{
+  "id": "",
+  "revision": 0,
+  "last_node_id": 3,
+  "last_link_id": 1,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "IdeogramV3",
+      "pos": [
+        180,
+        180
+      ],
+      "size": [
+        460,
+        420
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "character_image",
+          "type": "IMAGE",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "character_mask",
+          "type": "MASK",
+          "link": null,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            1
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "IdeogramV3"
+      },
+      "widgets_values": [
+        "Symbolic editorial illustration for the workshop \"The Stories We Tell Our Machines\". Warm paper texture, precise linework, muted red blue gold and green palette, humane but tense, softly drawn systems diagrams, dashboards, policy rules, care and trust signals, institutional pressure. Poetic, gallery-quality, calm negative space. Absolutely no readable text, no words, no letters, no numbers, no captions, no signage.",
+        "2:3",
+        "Auto",
+        "AUTO",
+        0,
+        "randomize",
+        1,
+        "QUALITY"
+      ],
+      "title": "Ideogram — edit this prompt"
+    },
+    {
+      "id": 2,
+      "type": "SaveImage",
+      "pos": [
+        720,
+        180
+      ],
+      "size": [
+        400,
+        450
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 1
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "SaveImage"
+      },
+      "widgets_values": [
+        "workshop/poster"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "Note",
+      "pos": [
+        180,
+        640
+      ],
+      "size": [
+        460,
+        160
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {
+        "text": ""
+      },
+      "widgets_values": [
+        "Edit the Ideogram prompt above to change the visual STYLE. The app automatically appends each participant's themes + role to your prompt, then overlays the analysis summary as text on the final poster. You can change aspect ratio, rendering speed, magic prompt, etc., or add nodes. When done: Export (API) and replace workflows/ideogram_poster_api.json."
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      2,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}

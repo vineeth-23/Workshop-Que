@@ -129,14 +129,14 @@ function renderAnalysis(analysis) {
         ${renderList([...(analysis.cross_factor_links || []), ...(analysis.risks_or_blind_spots || []), ...(analysis.facilitator_notes || [])])}
       </article>
     </div>
-    <section class="animation-panel" id="animationPanel">
+    <section class="poster-panel" id="posterPanel">
       <div>
-        <p class="kicker">Animation</p>
-        <h4>Generate a moving visual from this response</h4>
-        <p>The raw answers and analysed response will both be sent to ComfyUI.</p>
+        <p class="kicker">Poster</p>
+        <h4>Generate a poster from this response</h4>
+        <p>Ideogram renders a symbolic image on Comfy Cloud; the participant summary is overlaid as crisp text.</p>
       </div>
-      <button class="analysis-action" type="button" id="generateAnimation">Generate animation</button>
-      <div class="animation-output" id="animationOutput" aria-live="polite"></div>
+      <button class="analysis-action" type="button" id="generatePoster">Generate poster</button>
+      <div class="poster-output" id="posterOutput" aria-live="polite"></div>
     </section>
   `;
   analysisPanel.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -249,52 +249,319 @@ async function requestAnalysis() {
   }
 }
 
-function setAnimationStatus(message, videoUrl = "") {
-  const output = document.querySelector("#animationOutput");
+function setPosterStatus(message) {
+  const output = document.querySelector("#posterOutput");
   if (!output) return;
-
-  output.innerHTML = videoUrl
-    ? `<p>${escapeHtml(message)}</p><video controls playsinline src="${escapeHtml(videoUrl)}"></video>`
-    : `<p>${escapeHtml(message)}</p>`;
+  const status = output.querySelector(".poster-status");
+  if (status) {
+    status.textContent = message;
+  } else {
+    output.innerHTML = `<p class="poster-status">${escapeHtml(message)}</p>`;
+  }
 }
 
-async function pollAnimation(promptId) {
+function wrapLines(ctx, text, maxWidth) {
+  const lines = [];
+  String(text || "")
+    .split(/\n+/)
+    .forEach((paragraph) => {
+      let line = "";
+      paragraph.split(/\s+/).forEach((word) => {
+        const candidate = line ? `${line} ${word}` : word;
+        if (ctx.measureText(candidate).width > maxWidth && line) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = candidate;
+        }
+      });
+      if (line) lines.push(line);
+    });
+  return lines;
+}
+
+const WORD_STOPWORDS = new Set(
+  ("the a an and or but of to in on for with as is are be been being this that these those they them their it its " +
+   "we our you your i me my he she his her not no yes can could would should will may might do does did done has have " +
+   "had who whom which what when where why how than then so such more most very also into from by at if about across " +
+   "over under between within without participant response responses answer answers system systems")
+    .split(" "),
+);
+
+const CLOUD_PALETTE = {
+  warm: ["#b6533e", "#a8472f", "#bd7a24"],
+  cool: ["#33697a", "#5a6b70", "#744a74"],
+  topic: ["#6b743f", "#566b3a"],
+  emotion: ["#bd7a24", "#c98a3a"],
+  neutral: ["#5b5550", "#736b62"],
+};
+
+// Which palette family a matching_topic factor belongs to.
+const FACTOR_GROUP = {
+  care: "warm",
+  trust: "warm",
+  generosity: "warm",
+  nurturing: "warm",
+  societal_contribution: "topic",
+  profit_service: "neutral",
+  retention: "cool",
+  indifference: "cool",
+};
+
+function salientWords(text, limit) {
+  const counts = new Map();
+  String(text || "")
+    .toLowerCase()
+    .replace(/[^a-z\s-]/g, " ")
+    .split(/\s+/)
+    .forEach((word) => {
+      if (word.length < 4 || WORD_STOPWORDS.has(word)) return;
+      counts.set(word, (counts.get(word) || 0) + 1);
+    });
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit);
+}
+
+// The first meaningful word of a label, lightly stemmed — used to collapse
+// near-duplicates like "care", "care for others", "care and repair".
+function rootToken(label) {
+  const tokens = String(label)
+    .toLowerCase()
+    .replace(/[^a-z\s-]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+  for (const token of tokens) {
+    if (token.length > 2 && !WORD_STOPWORDS.has(token)) return token.replace(/s$/, "");
+  }
+  return tokens[0] || "";
+}
+
+// Gather words + weights + colors from every part of the analysis.
+function buildWordItems(analysis) {
+  const items = [];
+  const seen = new Set();
+  const usedRoots = new Set();
+  const add = (text, weight, group) => {
+    const label = String(text || "").trim();
+    const key = label.toLowerCase();
+    if (label.length < 2 || seen.has(key)) return;
+    const root = rootToken(label);
+    if (root && usedRoots.has(root)) return; // skip words sharing a leading root (care / care for others / ...)
+    seen.add(key);
+    if (root) usedRoots.add(root);
+    const palette = CLOUD_PALETTE[group] || CLOUD_PALETTE.neutral;
+    items.push({ label, weight, color: palette[items.length % palette.length] });
+  };
+
+  const topics = analysis.matching_topic || {};
+  Object.entries(topics).forEach(([key, factor]) => {
+    const score = factor && typeof factor.score === "number" ? factor.score : null;
+    if (score == null) return;
+    const name = key.replace(/_/g, " ");
+    add(name, score, FACTOR_GROUP[key] || "neutral");
+  });
+
+  [
+    ["propensity_to_show_care", "care for others"],
+    ["societal_support", "societal support"],
+    ["institutional_support", "institutional support"],
+    ["balance", "balance"],
+  ].forEach(([key, name]) => {
+    const factor = analysis[key];
+    if (factor && typeof factor.score === "number") add(name, factor.score, "neutral");
+  });
+
+  (analysis.dominant_topics || []).slice(0, 6).forEach((topic, i) => add(topic, 64 - i * 5, "topic"));
+  (analysis.compassion_sentiment?.emotions || []).slice(0, 6).forEach((emotion, i) => add(emotion, 52 - i * 4, "emotion"));
+  salientWords(analysis.participant_summary, 10).forEach(([word, count]) => add(word, 22 + Math.min(count, 4) * 7, "neutral"));
+
+  return items;
+}
+
+function boxesOverlap(a, b, gap) {
+  return !(a.x + a.w + gap < b.x || b.x + b.w + gap < a.x || a.y + a.h + gap < b.y || b.y + b.h + gap < a.y);
+}
+
+// Archimedean-spiral packing: largest words near the centre, smaller ones spiral outward.
+function packWords(ctx, items, areaW, areaH) {
+  const placed = [];
+  const cx = areaW / 2;
+  const cy = areaH / 2;
+  const gap = Math.max(2, areaW * 0.006);
+  items
+    .slice()
+    .sort((a, b) => b.fontSize - a.fontSize)
+    .forEach((item) => {
+      ctx.font = `700 ${item.fontSize}px Georgia, serif`;
+      const w = ctx.measureText(item.label).width;
+      const h = item.fontSize;
+      for (let t = 0; t < 4000; t += 1) {
+        const r = areaW * 0.012 * t * 0.18;
+        const angle = t * 0.45;
+        const x = cx + r * Math.cos(angle) - w / 2;
+        const y = cy + r * Math.sin(angle) - h / 2;
+        if (x < 0 || y < 0 || x + w > areaW || y + h > areaH) continue;
+        const box = { x, y, w, h };
+        if (!placed.some((p) => boxesOverlap(p, box, gap))) {
+          item.box = box;
+          placed.push(box);
+          break;
+        }
+      }
+    });
+}
+
+function renderPoster(imageUrl) {
+  const output = document.querySelector("#posterOutput");
+  if (!output) return;
+
+  const analysis = latestAnalysis || {};
+  const role = assignedRole?.name || "Participant";
+  const image = new Image();
+  image.crossOrigin = "anonymous";
+
+  image.onload = () => {
+    const width = image.naturalWidth || 832;
+    const imageHeight = image.naturalHeight || 1248;
+    const scale = width / 832;
+    const pad = Math.round(width * 0.07);
+    const headerHeight = Math.round(width * 0.11);
+    const cloudHeight = Math.round(width * 1.0);
+
+    // Size each word: weight (score 0-100 / derived) -> font size.
+    const items = buildWordItems(analysis);
+    const weights = items.map((it) => it.weight);
+    const wMin = Math.min(...weights, 18);
+    const wMax = Math.max(...weights, 96);
+    const minFont = 15 * scale;
+    const maxFont = 58 * scale;
+    items.forEach((it) => {
+      const norm = (it.weight - wMin) / Math.max(1, wMax - wMin);
+      it.fontSize = Math.round(minFont + norm * (maxFont - minFont));
+    });
+
+    const measure = document.createElement("canvas").getContext("2d");
+    packWords(measure, items, width - pad * 2, cloudHeight);
+
+    const bandHeight = headerHeight + cloudHeight + pad;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = imageHeight + bandHeight;
+    const ctx = canvas.getContext("2d");
+
+    // Artwork
+    ctx.drawImage(image, 0, 0, width, imageHeight);
+
+    // Parchment band + accent rule
+    ctx.fillStyle = "#efe7d6";
+    ctx.fillRect(0, imageHeight, width, bandHeight);
+    ctx.fillStyle = "#b6533e";
+    ctx.fillRect(0, imageHeight, width, Math.max(4, Math.round(width * 0.006)));
+
+    // Header
+    ctx.textBaseline = "top";
+    ctx.fillStyle = "#2a2622";
+    ctx.font = `700 ${Math.round(width * 0.04)}px Georgia, serif`;
+    ctx.fillText(`Answered as ${role}`, pad, imageHeight + pad);
+
+    // Word cloud
+    const cloudTop = imageHeight + headerHeight;
+    ctx.textBaseline = "top";
+    items.forEach((item) => {
+      if (!item.box) return;
+      ctx.font = `700 ${item.fontSize}px Georgia, serif`;
+      ctx.fillStyle = item.color;
+      ctx.fillText(item.label, pad + item.box.x, cloudTop + item.box.y);
+    });
+
+    output.innerHTML = "";
+
+    const makeDownload = (label, filename) => {
+      const link = document.createElement("a");
+      link.textContent = label;
+      link.className = "analysis-action";
+      link.download = filename;
+      return link;
+    };
+    const makeItem = (title, mediaEl, downloadEl) => {
+      const item = document.createElement("figure");
+      item.className = "poster-item";
+      const caption = document.createElement("figcaption");
+      caption.className = "poster-caption";
+      caption.textContent = title;
+      const actions = document.createElement("div");
+      actions.className = "poster-actions";
+      actions.appendChild(downloadEl);
+      item.append(caption, mediaEl, actions);
+      return item;
+    };
+
+    // 1) Image — the bare AI artwork
+    const bareImage = document.createElement("img");
+    bareImage.className = "poster-canvas";
+    bareImage.alt = "Generated image";
+    bareImage.src = imageUrl;
+    const imageDownload = makeDownload("Download image", "stories-we-tell-image.png");
+    imageDownload.href = imageUrl;
+
+    // 2) Image + Text — the artwork with the word cloud overlaid
+    canvas.classList.add("poster-canvas");
+    const posterDownload = makeDownload("Download image + text", "stories-we-tell-poster.png");
+    canvas.toBlob((blob) => {
+      if (blob) posterDownload.href = URL.createObjectURL(blob);
+    }, "image/png");
+
+    output.append(
+      makeItem("Image", bareImage, imageDownload),
+      makeItem("Image + Text", canvas, posterDownload),
+    );
+  };
+
+  image.onerror = () => setPosterStatus("The image was generated but could not be loaded.");
+  image.src = imageUrl;
+}
+
+async function pollImage(promptId) {
   clearTimeout(animationPollTimer);
   try {
-    const response = await fetch(`/api/animation-status?promptId=${encodeURIComponent(promptId)}`);
+    const response = await fetch(`/api/image-status?promptId=${encodeURIComponent(promptId)}`);
     const result = await response.json();
     if (!response.ok || !result.ok) {
-      throw new Error(result.error || "Unable to check animation status");
+      throw new Error(result.error || "Unable to check generation status");
     }
 
     if (result.status === "completed" && result.outputs?.length) {
-      setAnimationStatus("Animation ready.", result.outputs[0].url);
-      const button = document.querySelector("#generateAnimation");
+      setPosterStatus("Poster ready.");
+      renderPoster(result.outputs[0].url);
+      const button = document.querySelector("#generatePoster");
       if (button) button.disabled = false;
       return;
     }
 
-    setAnimationStatus("Animation is still rendering in ComfyUI...");
-    animationPollTimer = setTimeout(() => pollAnimation(promptId), 5000);
+    if (result.status === "failed") {
+      throw new Error(result.error || "Comfy Cloud could not generate the image");
+    }
+
+    setPosterStatus("Generating the image on Comfy Cloud...");
+    animationPollTimer = setTimeout(() => pollImage(promptId), 4000);
   } catch (error) {
-    setAnimationStatus(error.message || "Unable to check animation status.");
-    const button = document.querySelector("#generateAnimation");
+    setPosterStatus(error.message || "Unable to check generation status.");
+    const button = document.querySelector("#generatePoster");
     if (button) button.disabled = false;
   }
 }
 
-async function requestAnimation() {
+async function requestImage() {
   if (!latestAnalysis) {
-    setAnimationStatus("Generate the analysis first.");
+    setPosterStatus("Generate the analysis first.");
     return;
   }
 
-  const button = document.querySelector("#generateAnimation");
+  const button = document.querySelector("#generatePoster");
   if (button) button.disabled = true;
-  setAnimationStatus("Sending raw responses and analysis to ComfyUI...");
+  setPosterStatus("Sending the response to Comfy Cloud...");
 
   try {
-    const response = await fetch("/api/generate-animation", {
+    const response = await fetch("/api/generate-image", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -306,12 +573,12 @@ async function requestAnimation() {
     });
     const result = await response.json();
     if (!response.ok || !result.ok) {
-      throw new Error(result.error || "Unable to queue animation");
+      throw new Error(result.error || "Unable to queue image");
     }
-    setAnimationStatus("Animation queued in ComfyUI. This can take a while locally.");
-    pollAnimation(result.promptId);
+    setPosterStatus("Queued on Comfy Cloud. Generating the image...");
+    pollImage(result.promptId);
   } catch (error) {
-    setAnimationStatus(error.message || "Animation could not be queued.");
+    setPosterStatus(error.message || "Image could not be queued.");
     if (button) button.disabled = false;
   }
 }
@@ -402,8 +669,8 @@ document.addEventListener("click", (event) => {
   if (event.target?.id === "generateAnalysis") {
     requestAnalysis();
   }
-  if (event.target?.id === "generateAnimation") {
-    requestAnimation();
+  if (event.target?.id === "generatePoster") {
+    requestImage();
   }
 });
 

@@ -1,0 +1,23 @@
+{
+  "1": {
+    "class_type": "IdeogramV3",
+    "_meta": { "title": "Ideogram — edit this prompt" },
+    "inputs": {
+      "prompt": "Symbolic editorial illustration for the workshop \"The Stories We Tell Our Machines\". Warm paper texture, precise linework, muted red blue gold and green palette, humane but tense, softly drawn systems diagrams, dashboards, policy rules, care and trust signals, institutional pressure. Poetic, gallery-quality, calm negative space. Absolutely no readable text, no words, no letters, no numbers, no captions, no signage.",
+      "aspect_ratio": "2:3",
+      "resolution": "Auto",
+      "magic_prompt_option": "AUTO",
+      "rendering_speed": "QUALITY",
+      "num_images": 1,
+      "seed": 0
+    }
+  },
+  "2": {
+    "class_type": "SaveImage",
+    "_meta": { "title": "SaveImage" },
+    "inputs": {
+      "images": ["1", 0],
+      "filename_prefix": "workshop/poster"
+    }
+  }
+}

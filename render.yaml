@@ -10,5 +10,7 @@ services:
         sync: false
       - key: OPENAI_MODEL
         value: gpt-5.4-mini
-      - key: COMFYUI_URL
-        value: ""
+      - key: COMFY_API_KEY
+        sync: false
+      - key: COMFY_BASE_URL
+        value: https://cloud.comfy.org
